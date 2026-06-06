@@ -56,20 +56,21 @@ export default function Factory() {
         <meshStandardMaterial color="#374151" roughness={0.7} metalness={0.2} />
       </mesh>
       
-      {/* 卸料口 */}
-      {[-15, -10, -5, 0, 5].map((x, i) => (
+      {/* 卸料口 - 6个 */}
+      {[-15, -9, -3, 3, 9, 15].map((x, i) => (
         <group key={i} position={[x, 3, 13]}>
           <mesh>
-            <boxGeometry args={[3, 4, 0.5]} />
+            <boxGeometry args={[4, 4.5, 0.5]} />
             <meshStandardMaterial color="#1f2937" />
           </mesh>
           <mesh position={[0, -1.5, 0.3]}>
-            <boxGeometry args={[2.5, 1, 0.1]} />
+            <boxGeometry args={[3.5, 1, 0.1]} />
             <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={0.3} />
           </mesh>
-          <mesh position={[0, 2, 0.5]}>
-            <boxGeometry args={[1.5, 0.8, 0.1]} />
-            <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={0.5} />
+          {/* 卸料口编号发光标识 */}
+          <mesh position={[0, 1.5, 0.3]}>
+            <boxGeometry args={[2, 1, 0.1]} />
+            <meshStandardMaterial color="#00ff88" emissive="#00ff88" emissiveIntensity={0.5} />
           </mesh>
         </group>
       ))}

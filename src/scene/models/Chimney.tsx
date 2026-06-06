@@ -10,6 +10,8 @@ interface ChimneyProps {
 export default function Chimney({ position, isAlarm }: ChimneyProps) {
   const groupRef = useRef<THREE.Group>(null);
   const smokeRef = useRef<THREE.Points>(null);
+  const glowRef = useRef<THREE.Mesh>(null);
+  const lightRef = useRef<THREE.PointLight>(null);
 
   const smokeParticles = useMemo(() => {
     const positions = new Float32Array(150 * 3);
@@ -25,7 +27,9 @@ export default function Chimney({ position, isAlarm }: ChimneyProps) {
     return { positions, velocities };
   }, []);
 
-  useFrame(() => {
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+    
     if (smokeRef.current) {
       const positions = smokeRef.current.geometry.attributes.position.array as Float32Array;
       for (let i = 0; i < 150; i++) {
@@ -41,10 +45,39 @@ export default function Chimney({ position, isAlarm }: ChimneyProps) {
       }
       smokeRef.current.geometry.attributes.position.needsUpdate = true;
     }
+
+    if (glowRef.current && isAlarm) {
+      const pulse = 1 + Math.sin(time * 4) * 0.2;
+      glowRef.current.scale.set(pulse, pulse, pulse);
+      const mat = glowRef.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = 0.3 + Math.sin(time * 4) * 0.15;
+    }
+
+    if (lightRef.current) {
+      lightRef.current.intensity = isAlarm ? (2 + Math.sin(time * 6) * 1) : 0.5;
+      lightRef.current.color.set(isAlarm ? '#ff0000' : '#ffaa00');
+    }
   });
 
   return (
     <group ref={groupRef} position={position}>
+      {/* 报警辉光 */}
+      {isAlarm && (
+        <mesh ref={glowRef} position={[0, 11, 0]}>
+          <cylinderGeometry args={[3, 4, 16, 16]} />
+          <meshBasicMaterial color="#ff0000" transparent opacity={0.3} />
+        </mesh>
+      )}
+
+      {/* 报警光源 */}
+      <pointLight
+        ref={lightRef}
+        position={[0, 12, 0]}
+        intensity={0.5}
+        color={isAlarm ? '#ff0000' : '#ffaa00'}
+        distance={15}
+      />
+
       {/* 烟囱底座 */}
       <mesh position={[0, 2, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[2.5, 3, 4, 16]} />
@@ -55,7 +88,9 @@ export default function Chimney({ position, isAlarm }: ChimneyProps) {
       <mesh position={[0, 11, 0]} castShadow>
         <cylinderGeometry args={[1.5, 2, 14, 16]} />
         <meshStandardMaterial
-          color={isAlarm ? '#991b1b' : '#374151'}
+          color={isAlarm ? '#7f1d1d' : '#374151'}
+          emissive={isAlarm ? '#450a0a' : '#000000'}
+          emissiveIntensity={isAlarm ? 0.5 : 0}
           metalness={0.6}
           roughness={0.4}
         />
@@ -67,25 +102,25 @@ export default function Chimney({ position, isAlarm }: ChimneyProps) {
         <meshStandardMaterial color="#111827" metalness={0.8} roughness={0.2} />
       </mesh>
 
-      {/* 顶部警示灯 */}
+      {/* 顶部警示灯 - 双灯交替闪烁 */}
       <mesh position={[1.5, 19, 0]}>
-        <sphereGeometry args={[0.2, 16, 16]} />
+        <sphereGeometry args={[0.25, 16, 16]} />
         <meshStandardMaterial
           color={isAlarm ? '#ef4444' : '#f59e0b'}
           emissive={isAlarm ? '#ef4444' : '#f59e0b'}
-          emissiveIntensity={1}
+          emissiveIntensity={isAlarm ? 2 : 1}
         />
       </mesh>
       <mesh position={[-1.5, 19, 0]}>
-        <sphereGeometry args={[0.2, 16, 16]} />
+        <sphereGeometry args={[0.25, 16, 16]} />
         <meshStandardMaterial
           color={isAlarm ? '#ef4444' : '#f59e0b'}
           emissive={isAlarm ? '#ef4444' : '#f59e0b'}
-          emissiveIntensity={1}
+          emissiveIntensity={isAlarm ? 2 : 1}
         />
       </mesh>
 
-      {/* 烟雾粒子 */}
+      {/* 烟雾粒子 - 报警时变成深灰色 */}
       <points ref={smokeRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -96,10 +131,10 @@ export default function Chimney({ position, isAlarm }: ChimneyProps) {
           />
         </bufferGeometry>
         <pointsMaterial
-          size={0.5}
-          color={isAlarm ? '#666666' : '#aaaaaa'}
+          size={0.6}
+          color={isAlarm ? '#444444' : '#888888'}
           transparent
-          opacity={0.4}
+          opacity={isAlarm ? 0.6 : 0.4}
           sizeAttenuation
         />
       </points>
