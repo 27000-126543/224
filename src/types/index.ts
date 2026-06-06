@@ -83,6 +83,7 @@ export interface FlueGasEmission {
 
 export interface FlueGasSystem {
   id: number;
+  name: string;
   emission: FlueGasEmission;
   desulfurizationRunning: boolean;
   denitrificationRunning: boolean;
@@ -104,7 +105,7 @@ export interface AshBin {
   position: { x: number; y: number; z: number };
 }
 
-export type AlarmType = 'temperature' | 'oxygen' | 'vibration' | 'emission' | 'capacity' | 'lifetime';
+export type AlarmType = 'temperature' | 'oxygen' | 'vibration' | 'emission' | 'capacity' | 'lifetime' | 'manual' | 'epa' | 'workOrder' | 'system';
 export type AlarmLevel = 'info' | 'warning' | 'critical';
 
 export interface Alarm {
@@ -122,12 +123,14 @@ export interface Alarm {
 
 export type WorkOrderType = 'repair' | 'overhaul' | 'maintenance';
 export type WorkOrderStatus = 'pending' | 'in-progress' | 'completed';
+export type WorkOrderPriority = 'low' | 'medium' | 'high';
 
 export interface WorkOrder {
   id: string;
   deviceId: string;
   deviceName: string;
   type: WorkOrderType;
+  priority: WorkOrderPriority;
   description: string;
   parts: string[];
   status: WorkOrderStatus;

@@ -98,12 +98,23 @@ export function generateInitialFlueGasSystems(): FlueGasSystem[] {
   return [
     {
       id: 1,
+      name: '1#烟气净化系统',
       emission: { so2: 25, nox: 80, particulate: 8, timestamp: new Date() },
       desulfurizationRunning: true,
       denitrificationRunning: true,
       sprayActive: false,
       status: 'normal',
       position: { x: 20, y: 0, z: 0 }
+    },
+    {
+      id: 2,
+      name: '2#烟气净化系统',
+      emission: { so2: 35, nox: 120, particulate: 12, timestamp: new Date() },
+      desulfurizationRunning: true,
+      denitrificationRunning: true,
+      sprayActive: false,
+      status: 'normal',
+      position: { x: 25, y: 0, z: 0 }
     }
   ];
 }
@@ -171,6 +182,7 @@ export function generateInitialWorkOrders(): WorkOrder[] {
       deviceId: 'incinerator-3',
       deviceName: '3#焚烧炉',
       type: 'overhaul',
+      priority: 'high',
       description: '运行超8000小时，需进行全面检修，包括炉衬检查、受热面清灰、密封件更换',
       parts: ['耐高温炉衬砖', '密封垫片组', '热电偶', '压力传感器'],
       status: 'pending',

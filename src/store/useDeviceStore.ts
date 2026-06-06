@@ -203,7 +203,8 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
             deviceName: inc.name,
             type: 'overhaul',
             priority: 'high',
-            description: inc.name + ' has run over 8000 hours, schedule overhaul'
+            description: inc.name + ' has run over 8000 hours, schedule overhaul',
+            parts: ['炉衬砖', '密封件', '热电偶']
           });
           addAlarm('lifetime', inc.id.toString(), inc.name, 'incinerator', 'warning',
             inc.name + ' has run over 8000 hours, please schedule overhaul and prepare spare parts');
@@ -231,7 +232,8 @@ export const useDeviceStore = create<DeviceState>((set, get) => ({
               deviceName: tur.name,
               type: 'repair',
               priority: 'high',
-              description: tur.name + ' vibration over limit, please inspect and repair'
+              description: tur.name + ' vibration over limit, please inspect and repair',
+              parts: ['轴承', '密封圈', '润滑油']
             });
             set(s => ({ generatedWorkOrders: new Set([...s.generatedWorkOrders, alarmKey]) }));
           }
