@@ -1,0 +1,246 @@
+import { create } from 'zustand';
+import type { Truck, PitZone, Incinerator, Turbine, FlueGasSystem, AshBin, WorkOrder } from '@/types';
+import {
+  generateInitialTrucks,
+  generateInitialPitZones,
+  generateInitialIncinerators,
+  generateInitialTurbines,
+  generateInitialFlueGasSystems,
+  generateInitialAshBins,
+  generateInitialWorkOrders,
+  generateTruck,
+  generateId
+} from '@/utils/mock';
+import { calculateOptimalPort, calculateBlendRatios } from '@/utils/calc';
+
+interface DeviceState {
+  trucks: Truck[];
+  pitZones: PitZone[];
+  incinerators: Incinerator[];
+  turbines: Turbine[];
+  flueGasSystems: FlueGasSystem[];
+  ashBins: AshBin[];
+  workOrders: WorkOrder[];
+  updateTruckPosition: (id: string, position: { x: number; z: number }) => void;
+  updateTruckStatus: (id: string, status: Truck['status']) => void;
+  addTruck: () => void;
+  removeTruck: (id: string) => void;
+  assignPortToTruck: (truckId: string, port: number) => void;
+  updatePitZone: (id: number, data: Partial<PitZone>) => void;
+  recalculateBlendRatios: () => void;
+  updateIncinerator: (id: number, data: Partial<Incinerator>) => void;
+  updateTurbine: (id: number, data: Partial<Turbine>) => void;
+  updateFlueGasSystem: (id: number, data: Partial<FlueGasSystem>) => void;
+  updateAshBin: (id: number, data: Partial<AshBin>) => void;
+  addWorkOrder: (order: Omit<WorkOrder, 'id' | 'createdAt' | 'status'>) => void;
+  updateWorkOrderStatus: (id: string, status: WorkOrder['status']) => void;
+  simulateRealTimeData: () => void;
+}
+
+export const useDeviceStore = create<DeviceState>((set, get) => ({
+  trucks: generateInitialTrucks(5),
+  pitZones: calculateBlendRatios(generateInitialPitZones()),
+  incinerators: generateInitialIncinerators(),
+  turbines: generateInitialTurbines(),
+  flueGasSystems: generateInitialFlueGasSystems(),
+  ashBins: generateInitialAshBins(),
+  workOrders: generateInitialWorkOrders(),
+
+  updateTruckPosition: (id, position) =>
+    set((state) => ({
+      trucks: state.trucks.map((t) => (t.id === id ? { ...t, position } : t))
+    })),
+
+  updateTruckStatus: (id, status) =>
+    set((state) => ({
+      trucks: state.trucks.map((t) => (t.id === id ? { ...t, status } : t))
+    })),
+
+  addTruck: () => {
+    const newTruck = generateTruck();
+    const zones = get().pitZones;
+    const optimalPort = calculateOptimalPort(newTruck, zones);
+    newTruck.assignedPort = optimalPort;
+    newTruck.status = 'approaching';
+    newTruck.targetPosition = { x: -15 + optimalPort * 5, z: 0 };
+    set((state) => ({ trucks: [...state.trucks, newTruck] }));
+  },
+
+  removeTruck: (id) =>
+    set((state) => ({
+      trucks: state.trucks.filter((t) => t.id !== id)
+    })),
+
+  assignPortToTruck: (truckId, port) =>
+    set((state) => ({
+      trucks: state.trucks.map((t) =>
+        t.id === truckId ? { ...t, assignedPort: port, targetPosition: { x: -15 + port * 5, z: 0 } } : t
+      )
+    })),
+
+  updatePitZone: (id, data) =>
+    set((state) => ({
+      pitZones: state.pitZones.map((z) => (z.id === id ? { ...z, ...data } : z))
+    })),
+
+  recalculateBlendRatios: () =>
+    set((state) => ({
+      pitZones: calculateBlendRatios(state.pitZones)
+    })),
+
+  updateIncinerator: (id, data) =>
+    set((state) => ({
+      incinerators: state.incinerators.map((i) => (i.id === id ? { ...i, ...data } : i))
+    })),
+
+  updateTurbine: (id, data) =>
+    set((state) => ({
+      turbines: state.turbines.map((t) => (t.id === id ? { ...t, ...data } : t))
+    })),
+
+  updateFlueGasSystem: (id, data) =>
+    set((state) => ({
+      flueGasSystems: state.flueGasSystems.map((f) => (f.id === id ? { ...f, ...data } : f))
+    })),
+
+  updateAshBin: (id, data) =>
+    set((state) => ({
+      ashBins: state.ashBins.map((a) => (a.id === id ? { ...a, ...data } : a))
+    })),
+
+  addWorkOrder: (order) =>
+    set((state) => ({
+      workOrders: [
+        ...state.workOrders,
+        { ...order, id: generateId(), status: 'pending', createdAt: new Date() }
+      ]
+    })),
+
+  updateWorkOrderStatus: (id, status) =>
+    set((state) => ({
+      workOrders: state.workOrders.map((o) =>
+        o.id === id
+          ? { ...o, status, completedAt: status === 'completed' ? new Date() : undefined }
+          : o
+      )
+    })),
+
+  simulateRealTimeData: () => {
+    const state = get();
+    
+    set({
+      incinerators: state.incinerators.map((inc) => {
+        let temp = inc.furnaceTemperature + (Math.random() - 0.5) * 20;
+        let oxygen = inc.oxygenContent + (Math.random() - 0.5) * 1;
+        let steam = inc.steamFlow + (Math.random() - 0.5) * 3;
+        let feedRate = inc.feedRate;
+        let damper = inc.damperOpening;
+        let status: Incinerator['status'] = 'normal';
+
+        if (temp > 1050) temp = 1050;
+        if (temp < 850) temp = 850;
+        if (oxygen > 12) oxygen = 12;
+        if (oxygen < 4) oxygen = 4;
+
+        if (temp > 1000 || oxygen < 6) {
+          status = 'alarm';
+          if (temp > 1000) feedRate = Math.max(50, feedRate - 2);
+          if (oxygen < 6) damper = Math.min(100, damper + 1);
+        } else if (temp > 980 || oxygen < 7) {
+          status = 'warning';
+        }
+
+        return { ...inc, furnaceTemperature: Math.round(temp * 10) / 10, oxygenContent: Math.round(oxygen * 10) / 10, steamFlow: Math.round(steam * 10) / 10, feedRate, damperOpening: damper, status, runningHours: inc.runningHours + 1/3600 };
+      }),
+
+      turbines: state.turbines.map((tur) => {
+        let vibration = tur.vibration + (Math.random() - 0.5) * 0.5;
+        let power = tur.powerOutput + (Math.random() - 0.5) * 2;
+        let load = tur.loadPercent + (Math.random() - 0.5) * 3;
+        let status: Turbine['status'] = 'normal';
+
+        if (vibration > 5) {
+          status = 'alarm';
+          load = Math.max(30, load - 5);
+        } else if (vibration > 4) {
+          status = 'warning';
+        }
+
+        if (vibration > 8) vibration = 8;
+        if (vibration < 1) vibration = 1;
+        if (load > 100) load = 100;
+        if (load < 0) load = 0;
+
+        return { ...tur, vibration: Math.round(vibration * 10) / 10, powerOutput: Math.round(power * 10) / 10, loadPercent: Math.round(load), status, runningHours: tur.runningHours + 1/3600 };
+      }),
+
+      flueGasSystems: state.flueGasSystems.map((fg) => {
+        let so2 = fg.emission.so2 + (Math.random() - 0.5) * 10;
+        let nox = fg.emission.nox + (Math.random() - 0.5) * 15;
+        let particulate = fg.emission.particulate + (Math.random() - 0.5) * 3;
+        let status: FlueGasSystem['status'] = 'normal';
+        let sprayActive = fg.sprayActive;
+
+        if (so2 > 100) so2 = 100;
+        if (so2 < 10) so2 = 10;
+        if (nox > 300) nox = 300;
+        if (nox < 40) nox = 40;
+        if (particulate > 25) particulate = 25;
+        if (particulate < 3) particulate = 3;
+
+        if (so2 > 80 || nox > 250 || particulate > 18) {
+          status = 'alarm';
+          sprayActive = true;
+        } else if (so2 > 60 || nox > 200 || particulate > 14) {
+          status = 'warning';
+          sprayActive = true;
+        } else {
+          sprayActive = false;
+        }
+
+        return {
+          ...fg,
+          emission: { so2: Math.round(so2 * 10) / 10, nox: Math.round(nox * 10) / 10, particulate: Math.round(particulate * 10) / 10, timestamp: new Date() },
+          status,
+          sprayActive
+        };
+      }),
+
+      ashBins: state.ashBins.map((ab) => {
+        let level = ab.currentLevel + (Math.random() > 0.7 ? 1 : 0);
+        let fillPercent = (level / ab.capacity) * 100;
+        let status: AshBin['status'] = 'normal';
+
+        if (fillPercent >= 95) {
+          status = 'full';
+        } else if (fillPercent >= 85) {
+          status = 'warning';
+        }
+
+        return { ...ab, currentLevel: level, fillPercent: Math.round(fillPercent), status };
+      }),
+
+      trucks: state.trucks.map((truck) => {
+        if (truck.status === 'approaching' && truck.targetPosition) {
+          const dx = truck.targetPosition.x - truck.position.x;
+          const dz = truck.targetPosition.z - truck.position.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          
+          if (dist < 0.5) {
+            return { ...truck, status: 'discharging' as const, position: truck.targetPosition };
+          }
+          
+          const speed = 0.15;
+          return {
+            ...truck,
+            position: {
+              x: truck.position.x + (dx / dist) * speed,
+              z: truck.position.z + (dz / dist) * speed
+            }
+          };
+        }
+        return truck;
+      })
+    });
+  }
+}));
